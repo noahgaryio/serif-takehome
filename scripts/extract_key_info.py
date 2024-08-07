@@ -21,10 +21,8 @@ def main(input_path, output_path, max_records):
     df = spark.read.json(input_path)
 
     # Log the schema
-    logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
     logger.debug("DEBUG_SCHEMA: Schema of the JSON file:")
     df.printSchema()
-    logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 
     # Explode arrays to get a flat structure
     df_exploded = df \
@@ -32,31 +30,30 @@ def main(input_path, output_path, max_records):
         .withColumn("reporting_plans", explode(col("reporting_plans")))
 
     # Log some exploded data
-    logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
     logger.debug("DEBUG_EXPLODED_DATA: Sample of exploded data:")
     df_exploded.show(5, False)
-    logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+
+    # Cache exploded DataFrame
+    df_exploded.cache()
 
     # Collect unique plan names and descriptions
     unique_plan_names = df_exploded.select("reporting_plans.plan_name").distinct().limit(5)
     unique_descriptions = df_exploded.select("in_network_files.description").distinct().limit(5)
 
     # Log unique plan names and descriptions
-    logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
     logger.debug("DEBUG_UNIQUE_PLAN_NAMES: Unique plan names")
     unique_plan_names.show(truncate=False)
     logger.debug("DEBUG_UNIQUE_DESCRIPTIONS: Unique in-network file descriptions")
     unique_descriptions.show(truncate=False)
-    logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 
     # Filter out rows where in_network_files and reporting_plans are not null
+    logger.debug("Total records before filtering: {}".format(df_exploded.count()))
     df_filtered = df_exploded.filter(col("in_network_files").isNotNull() & col("reporting_plans").isNotNull())
+    logger.debug("Total records after filtering: {}".format(df_filtered.count()))
 
     # Log filtered data
-    logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
     logger.debug("DEBUG_FILTERED_DATA: Sample of filtered data:")
     df_filtered.show(5, False)
-    logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 
     # Select columns and limit the number of records
     df_selected = df_filtered.select(
@@ -66,10 +63,8 @@ def main(input_path, output_path, max_records):
     ).limit(max_records)
 
     # Log selected columns
-    logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
     logger.debug("DEBUG_SELECTED_COLUMNS: Selected columns sample:")
     df_selected.show(5, False)
-    logger.debug("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 
     # Collect URLs and write to output file
     urls = df_selected.select("location").rdd.map(lambda row: row[0]).collect()

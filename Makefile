@@ -7,5 +7,5 @@ run_all:
 	@scripts/run_all.sh $(ARGS)
 
 clean:
-	@rm -f data/index_file.gz data/decompressed.json data/output_urls.txt
+	@rm -f data/index_file.gz data/output_urls.txt
 	@rm -f logs/spark_logs.txt logs/script_logs.txt
